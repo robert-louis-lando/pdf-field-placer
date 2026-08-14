@@ -1,11 +1,18 @@
 <script setup lang="ts"></script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <v-app>
+    <v-app-bar>
+      <template v-slot:prepend>
+        <v-app-bar-nav-icon></v-app-bar-nav-icon>
+      </template>
+
+      <v-app-bar-title>PDF Field Placer </v-app-bar-title>
+    </v-app-bar>
+    <v-main>
+      <router-view></router-view>
+    </v-main>
+  </v-app>
 </template>
 
 <style scoped></style>
