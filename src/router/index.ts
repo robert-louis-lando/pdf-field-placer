@@ -1,4 +1,4 @@
-import FileUploader from '@/component/fileUploader.vue'
+import FileUploader from '@/component/fileUploader/fileUploader.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [

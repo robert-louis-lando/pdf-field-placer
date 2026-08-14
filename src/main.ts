@@ -7,6 +7,7 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { triggerErrorSnackbar } from './component/snackBar/snackBar.ts'
 const vuetify = createVuetify({
   components,
   directives,
@@ -20,5 +21,14 @@ app.use(router)
 app.mount('#app')
 
 app.config.errorHandler = (err) => {
-  console.log(err)
+  console.error('Global Vue Error:', err)
+
+  const message =
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : 'An unexpected error occurred.'
+
+  triggerErrorSnackbar(message)
 }

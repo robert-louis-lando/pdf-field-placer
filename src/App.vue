@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import SnackBar from './component/snackBar/snackBar.vue'
+</script>
 
 <template>
   <v-app>
@@ -12,6 +14,7 @@
     <v-main>
       <router-view></router-view>
     </v-main>
+    <SnackBar></SnackBar>
   </v-app>
 </template>
 
