@@ -3,14 +3,14 @@ import { ref } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
 import { pdfData } from '../fileUploader/fileUploader'
 import HeaderComponent from '../headerComponent/headerComponent.vue'
-const props = defineProps<{
-  pdfSource: string | ArrayBuffer | null
-}>()
+
 const page = ref(1)
 const totalPages = ref(0)
 
 function handleLoaded() {
-  totalPages.value = pdfData.value?.pageCount ?? 0
+  if (pdfData.value) {
+    totalPages.value = pdfData.value.pageCount
+  }
 }
 </script>
 
