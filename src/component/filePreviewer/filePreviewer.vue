@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
 import { pdfData } from '../fileUploader/fileUploader'
+import HeaderComponent from '../headerComponent/headerComponent.vue'
 const props = defineProps<{
   pdfSource: string | ArrayBuffer | null
 }>()
@@ -22,11 +23,11 @@ function handleLoaded() {
       <v-btn :disabled="page >= totalPages" size="small" width="100" @click="page++">Next</v-btn>
     </v-container>
 
-    <!-- PDF Page Canvas -->
     <v-container>
       <VuePdfEmbed :source="pdfData.buffer" :page="page" @loaded="handleLoaded" />
     </v-container>
   </div>
+  <HeaderComponent></HeaderComponent>
 </template>
 
 <style scoped>
