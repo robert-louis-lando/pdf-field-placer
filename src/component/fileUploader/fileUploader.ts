@@ -3,7 +3,7 @@ import { triggerErrorSnackbar } from '../snackBar/snackBar'
 import * as XLSX from 'xlsx'
 import { PDFDocument } from 'pdf-lib'
 import router from '@/router'
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ExcelData<T = Record<string, any>> {
   jsonData: T[]
   headers: string[]
@@ -22,31 +22,33 @@ export const pdfData = ref<PDFData>()
 const excelTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
 const pdfTypes = ['application/pdf']
 export async function processFiles() {
-  validateFiles()
+  if (!validateFiles()) return
   excelData.value = await parseSpreadsheet(excelFile.value)
   pdfData.value = await parsePDF(pdfFile.value)
-  router.push('/pdf-preview')
+  await router.push('/pdf-preview')
 }
 function validateFiles() {
   if (!excelFile.value) {
     triggerErrorSnackbar('Excel file upload required')
-    return
+    return false
   }
   if (!excelTypes.includes(excelFile.value.type)) {
     triggerErrorSnackbar('Excel file upload required. Uploaded wrong file type')
-    return
+    return false
   }
 
   if (!pdfFile.value) {
     triggerErrorSnackbar('PDF file upload required')
-    return
+    return false
   }
   if (!pdfTypes.includes(pdfFile.value.type)) {
     triggerErrorSnackbar('PDF file upload required .Uploaded wrong file type')
-    return
+    return false
   }
+  return true
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function parseSpreadsheet<T = Record<string, any>>(file: File): Promise<ExcelData<T>> {
   // 1. Read file buffer
   const arrayBuffer = await file.arrayBuffer()

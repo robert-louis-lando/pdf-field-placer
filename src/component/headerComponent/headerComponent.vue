@@ -5,7 +5,9 @@ import { excelData } from '../fileUploader/fileUploader'
 <template>
   <div class="floating-bottom-bar flex align-center">
     <v-chip-group selected-class="text-secondary">
-      <v-chip v-for="header in excelData?.headers">{{ header }}</v-chip>
+      <v-chip v-for="header in excelData?.headers" :key="header" :value="header">{{
+        header
+      }}</v-chip>
     </v-chip-group>
   </div>
 </template>

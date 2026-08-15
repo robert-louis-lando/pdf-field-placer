@@ -1,17 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
 import { pdfData } from '../fileUploader/fileUploader'
 import HeaderComponent from '../headerComponent/headerComponent.vue'
 
 const page = ref(1)
-const totalPages = ref(0)
-
-function handleLoaded() {
-  if (pdfData.value) {
-    totalPages.value = pdfData.value.pageCount
-  }
-}
+const totalPages = computed(() => pdfData.value?.pageCount ?? 0)
+const sourceBuffer = computed(() => pdfData.value?.buffer)
 </script>
 
 <template>
@@ -24,7 +19,7 @@ function handleLoaded() {
     </v-container>
 
     <v-container>
-      <VuePdfEmbed :source="pdfData.buffer" :page="page" @loaded="handleLoaded" />
+      <VuePdfEmbed :source="sourceBuffer" :page="page" />
     </v-container>
   </div>
   <HeaderComponent></HeaderComponent>
@@ -45,7 +40,6 @@ function handleLoaded() {
   background-color: #ffffff;
 }
 
-/* 🎯 THIS IS THE MAGIC FIX FOR MOBILE */
 .pdf-wrapper :deep(canvas) {
   width: 100% !important;
   height: auto !important;
