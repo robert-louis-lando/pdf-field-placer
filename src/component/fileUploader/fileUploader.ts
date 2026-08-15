@@ -8,11 +8,16 @@ export interface ExcelData<T = Record<string, any>> {
   jsonData: T[]
   headers: string[]
 }
+export interface PageSize {
+  width: number
+  height: number
+}
 export interface PDFData {
   pdfDoc: PDFDocument
   buffer: ArrayBuffer
   pageCount: number
   fields: string[]
+  dimensions: PageSize
 }
 
 export const excelFile = ref()
@@ -85,6 +90,10 @@ export async function parsePDF(file: File): Promise<PDFData> {
 
   // 3. Extract key details
   const pageCount = pdfDoc.getPageCount()
+  const dimensions: PageSize = pdfDoc.getPages().map((page) => page.getSize())[0] ?? {
+    width: 0,
+    height: 0,
+  }
   const form = pdfDoc.getForm()
   const fields = form.getFields().map((field) => field.getName())
 
@@ -93,5 +102,6 @@ export async function parsePDF(file: File): Promise<PDFData> {
     buffer,
     pageCount,
     fields,
+    dimensions,
   }
 }

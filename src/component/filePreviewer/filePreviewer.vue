@@ -7,6 +7,33 @@ import HeaderComponent from '../headerComponent/headerComponent.vue'
 const page = ref(1)
 const totalPages = computed(() => pdfData.value?.pageCount ?? 0)
 const sourceBuffer = computed(() => pdfData.value?.buffer)
+const pdfDimensions = computed(() => pdfData.value?.dimensions)
+
+function getCoordinates(event: MouseEvent) {
+  const target = event.currentTarget as HTMLElement | null
+  if (!target) return
+
+  const rect = target.getBoundingClientRect()
+
+  const clickX = event.clientX - rect.left
+  const clickY = event.clientY - rect.top
+
+  const viewPortRatioX = clickX / rect.width
+  const viewPortRatioY = clickY / rect.height
+
+  if (!pdfDimensions.value) return
+
+  const positionXFromTop_LeftOrigin = Math.round(viewPortRatioX * pdfDimensions.value?.width)
+  const positionYFromTop_LeftOrigin = Math.round(viewPortRatioY * pdfDimensions.value?.height)
+
+  const pdfPositionX = positionXFromTop_LeftOrigin
+  const pdfPositionY = Math.round(pdfDimensions.value.height - positionYFromTop_LeftOrigin)
+
+  console.log(pdfPositionX, 'pdf x')
+  console.log(pdfPositionY, 'pdf y')
+  console.log(event.clientX, 'event x')
+  console.log(event.clientY, 'event y')
+}
 </script>
 
 <template>
@@ -18,8 +45,10 @@ const sourceBuffer = computed(() => pdfData.value?.buffer)
       <v-btn :disabled="page >= totalPages" size="small" width="100" @click="page++">Next</v-btn>
     </v-container>
 
-    <v-container>
-      <VuePdfEmbed :source="sourceBuffer" :page="page" />
+    <v-container
+      ><div class="pdf-wrapper" @click="getCoordinates">
+        <VuePdfEmbed :source="sourceBuffer" :page="page" />
+      </div>
     </v-container>
   </div>
   <HeaderComponent></HeaderComponent>
