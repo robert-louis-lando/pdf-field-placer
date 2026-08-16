@@ -1,8 +1,9 @@
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { triggerErrorSnackbar } from '../snackBar/snackBar'
 import * as XLSX from 'xlsx'
 import { PDFDocument } from 'pdf-lib'
 import router from '@/router'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ExcelData<T = Record<string, any>> {
   jsonData: T[]
@@ -14,24 +15,29 @@ export interface PageSize {
 }
 export interface PDFData {
   pdfDoc: PDFDocument
-  buffer: ArrayBuffer
+  buffer: Uint8Array
   pageCount: number
   fields: string[]
   dimensions: PageSize
 }
 
-export const excelFile = ref()
-export const pdfFile = ref()
+export const excelFile = ref<File>()
+export const pdfFile = ref<File>()
 export const excelData = ref<ExcelData>()
 export const pdfData = ref<PDFData>()
+export const pdfBuffer = shallowRef<Uint8Array | null>(null)
 const excelTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
 const pdfTypes = ['application/pdf']
+
+// Store Uint8Array instead of raw ArrayBuffer
+
 export async function processFiles() {
   if (!validateFiles()) return
-  excelData.value = await parseSpreadsheet(excelFile.value)
-  pdfData.value = await parsePDF(pdfFile.value)
+  excelData.value = await parseSpreadsheet(excelFile.value!)
+  pdfData.value = await parsePDF(pdfFile.value!)
   await router.push('/pdf-preview')
 }
+
 function validateFiles() {
   if (!excelFile.value) {
     triggerErrorSnackbar('Excel file upload required')
@@ -55,40 +61,35 @@ function validateFiles() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function parseSpreadsheet<T = Record<string, any>>(file: File): Promise<ExcelData<T>> {
-  // 1. Read file buffer
   const arrayBuffer = await file.arrayBuffer()
-
-  // 2. Read workbook
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
-  // 3. Get first sheet safely
   const firstSheetName = workbook.SheetNames[0]
   if (!firstSheetName) {
     return { jsonData: [], headers: [] }
   }
 
   const worksheet = workbook.Sheets[firstSheetName]
-
-  // 4. Extract headers (Row 1 as a string array)
   const rawRows = XLSX.utils.sheet_to_json<string[]>(worksheet ?? {}, { header: 1 })
   const headers: string[] = (rawRows[0] as string[]) || []
 
-  // 5. Convert worksheet to Array of Objects (keyed by headers)
   const jsonData = XLSX.utils.sheet_to_json<T>(worksheet ?? {}, {
-    defval: '', // Default value for empty cells
+    defval: '',
   })
 
   return { jsonData, headers }
 }
 
 export async function parsePDF(file: File): Promise<PDFData> {
-  // 1. Await the arrayBuffer promise
-  const buffer = await file.arrayBuffer()
+  const arrayBuffer = await file.arrayBuffer()
 
-  // 2. Load the PDF document
-  const pdfDoc = await PDFDocument.load(buffer)
+  // Create an independent Uint8Array
+  const bytes = new Uint8Array(arrayBuffer)
+  pdfBuffer.value = bytes.slice(0)
 
-  // 3. Extract key details
+  // Load using a cloned copy
+  const pdfDoc = await PDFDocument.load(pdfBuffer.value.slice(0))
+
   const pageCount = pdfDoc.getPageCount()
   const dimensions: PageSize = pdfDoc.getPages().map((page) => page.getSize())[0] ?? {
     width: 0,
@@ -99,7 +100,7 @@ export async function parsePDF(file: File): Promise<PDFData> {
 
   return {
     pdfDoc,
-    buffer,
+    buffer: pdfBuffer.value,
     pageCount,
     fields,
     dimensions,
