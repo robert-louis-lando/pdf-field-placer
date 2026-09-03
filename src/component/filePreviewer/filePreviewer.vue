@@ -46,7 +46,13 @@ const previewSource = computed(() => pdfData.value?.buffer.slice(0))
           @pointerdown="startFieldMove(field, $event)"
         >
           <span>{{ field.fieldName }}</span>
-          <button type="button" aria-label="Remove field" @click.stop="removeField(field.fieldName)">x</button>
+          <button
+            type="button"
+            aria-label="Remove field"
+            @click.stop="removeField(field.fieldName)"
+          >
+            x
+          </button>
         </div>
       </div>
     </v-container>

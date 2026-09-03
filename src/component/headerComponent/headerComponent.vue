@@ -3,8 +3,10 @@ import { computed } from 'vue'
 import { excelData } from '../fileUploader/fileUploader'
 import { fieldPlacements } from '../filePreviewer/filePreviewer'
 
-const availableHeaders = computed(
-  () => excelData.value?.headers.filter((header) => !fieldPlacements.value.some((field) => field.fieldName === header)),
+const availableHeaders = computed(() =>
+  excelData.value?.headers.filter(
+    (header) => !fieldPlacements.value.some((field) => field.fieldName === header),
+  ),
 )
 
 function startDrag(event: DragEvent, header: string) {
@@ -22,7 +24,8 @@ function startDrag(event: DragEvent, header: string) {
         :value="header"
         :draggable="true"
         @dragstart="startDrag($event, header)"
-      >{{ header }}</v-chip>
+        >{{ header }}</v-chip
+      >
     </v-chip-group>
   </div>
 </template>

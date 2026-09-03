@@ -44,7 +44,11 @@ export function allowFieldDrop(event: DragEvent) {
 export async function processFieldDrop(event: DragEvent) {
   event.preventDefault()
   const fieldName = event.dataTransfer?.getData('text/plain')
-  if (!fieldName || !pdfData.value || fieldPlacements.value.some((field) => field.fieldName === fieldName)) {
+  if (
+    !fieldName ||
+    !pdfData.value ||
+    fieldPlacements.value.some((field) => field.fieldName === fieldName)
+  ) {
     return
   }
 
@@ -82,10 +86,16 @@ export function startFieldMove(field: FieldPlacement, event: PointerEvent) {
     const rect = wrapper.getBoundingClientRect()
     const x = ((moveEvent.clientX - rect.left) / rect.width) * pdfDimensions.value.width
     const top = ((moveEvent.clientY - rect.top) / rect.height) * pdfDimensions.value.height
-    movingField.x = Math.max(0, Math.min(pdfDimensions.value.width - movingField.width, Math.round(x)))
+    movingField.x = Math.max(
+      0,
+      Math.min(pdfDimensions.value.width - movingField.width, Math.round(x)),
+    )
     movingField.y = Math.max(
       0,
-      Math.min(pdfDimensions.value.height - movingField.height, Math.round(pdfDimensions.value.height - top - movingField.height)),
+      Math.min(
+        pdfDimensions.value.height - movingField.height,
+        Math.round(pdfDimensions.value.height - top - movingField.height),
+      ),
     )
   }
 
