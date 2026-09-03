@@ -29,8 +29,6 @@ export const pdfBuffer = shallowRef<Uint8Array | null>(null)
 const excelTypes = ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
 const pdfTypes = ['application/pdf']
 
-// Store Uint8Array instead of raw ArrayBuffer
-
 export async function processFiles() {
   if (!validateFiles()) return
   excelData.value = await parseSpreadsheet(excelFile.value!)

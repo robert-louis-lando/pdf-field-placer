@@ -29,7 +29,8 @@ export const artificialHeaders = [
 ]
 let movingField: FieldPlacement | undefined
 
-function artificialDateValues(): Record<string, string> {
+// These values are generated at export time so artificial date headers always use today's date.
+export function artificialDateValues(): Record<string, string> {
   const today = new Date()
   return {
     [frenchDateWordsHeader]: new Intl.DateTimeFormat('fr-FR', {
@@ -65,6 +66,7 @@ export function getPdfCoordinates(event: DragEvent | MouseEvent): PageSize {
 
   if (!pdfDimensions.value) throw new Error('No PDF dimensions')
 
+  // Browser coordinates start at the top-left; pdf-lib positions start at the bottom-left.
   return {
     width: Math.round(viewPortRatioX * pdfDimensions.value.width),
     height: Math.round(viewPortRatioY * pdfDimensions.value.height),
@@ -101,6 +103,7 @@ export async function processFieldDrop(event: DragEvent) {
     width,
     height,
   }
+  // Editing remains overlay-only; the original PDF is changed only during export.
   fieldPlacements.value.push(placement)
 }
 
@@ -144,13 +147,28 @@ export function startFieldMove(field: FieldPlacement, event: PointerEvent) {
   window.addEventListener('pointerup', stop, { once: true })
 }
 
-function makePdfFilename(row: Record<string, unknown>, headers: string[]) {
+export function makePdfFilename(row: Record<string, unknown>, headers: string[]) {
   return headers
     .map((header) => String(getHeaderValue(row, header) ?? '').trim())
     .join('_')
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+export function validateOutputFilenames(filenames: string[]) {
+  if (filenames.some((filename) => !filename)) {
+    return 'A selected filename header is blank for at least one Excel row.'
+  }
+
+  const duplicateFilename = filenames.find(
+    (filename, index) =>
+      filenames.findIndex((candidate) => candidate.toLowerCase() === filename.toLowerCase()) !==
+      index,
+  )
+  return duplicateFilename
+    ? `Duplicate PDF filename "${duplicateFilename}.pdf". Choose different headers.`
+    : undefined
 }
 
 export async function createAndFillPdfs() {
@@ -164,25 +182,15 @@ export async function createAndFillPdfs() {
   }
 
   const filenames = rows.map((row) => makePdfFilename(row, filenameHeaders.value))
-  if (filenames.some((filename) => !filename)) {
-    triggerErrorSnackbar('A selected filename header is blank for at least one Excel row.')
-    return
-  }
-
-  const duplicateFilename = filenames.find(
-    (filename, index) =>
-      filenames.findIndex((candidate) => candidate.toLowerCase() === filename.toLowerCase()) !==
-      index,
-  )
-  if (duplicateFilename) {
-    triggerErrorSnackbar(
-      `Duplicate PDF filename "${duplicateFilename}.pdf". Choose different headers.`,
-    )
+  const filenameError = validateOutputFilenames(filenames)
+  if (filenameError) {
+    triggerErrorSnackbar(filenameError)
     return
   }
 
   const zip = new JSZip()
   for (const [index, row] of rows.entries()) {
+    // Start every row from the untouched template so fields never accumulate between outputs.
     const pdfDoc = await PDFDocument.load(new Uint8Array(pdfData.value.buffer))
     const form = pdfDoc.getForm()
     for (const placement of fieldPlacements.value) {
