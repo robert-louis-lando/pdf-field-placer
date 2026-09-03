@@ -1,5 +1,6 @@
 import FilePreviewer from '@/component/filePreviewer/filePreviewer.vue'
 import FileUploader from '@/component/fileUploader/fileUploader.vue'
+import { excelData, pdfData } from '@/component/fileUploader/fileUploader'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -12,6 +13,10 @@ const routes = [
     path: '/pdf-preview',
     name: 'pdf-previw',
     component: FilePreviewer,
+    beforeEnter: () => {
+      // A browser refresh clears in-memory uploads, so preview is valid only with both parsed files.
+      return excelData.value && pdfData.value ? true : '/'
+    },
   },
 ]
 const router = createRouter({
