@@ -52,3 +52,16 @@ npm run test:unit
 ```sh
 npm run lint
 ```
+
+## Deploy to GitHub Pages
+
+This repository deploys automatically to GitHub Pages whenever changes are pushed to `master`.
+
+1. Push the repository to GitHub.
+2. In the repository, open **Settings > Pages**.
+3. Set **Source** to **GitHub Actions**.
+4. Push to `master`, or run **Deploy to GitHub Pages** manually from the **Actions** tab.
+
+The deployed app will be available at:
+
+`https://robert-louis-lando.github.io/pdf-field-placer/`
