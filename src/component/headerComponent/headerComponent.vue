@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { excelData } from '../fileUploader/fileUploader'
-import { fieldPlacements } from '../filePreviewer/filePreviewer'
+import { artificialHeaders, fieldPlacements } from '../filePreviewer/filePreviewer'
 
 const availableHeaders = computed(() =>
-  excelData.value?.headers.filter(
-    (header) => !fieldPlacements.value.some((field) => field.fieldName === header),
+  [...(excelData.value?.headers ?? []), ...artificialHeaders].filter(
+    (header, index, headers) =>
+      headers.indexOf(header) === index &&
+      !fieldPlacements.value.some((field) => field.fieldName === header),
   ),
 )
 

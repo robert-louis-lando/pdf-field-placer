@@ -17,7 +17,40 @@ export interface FieldPlacement {
 
 export const fieldPlacements = ref<FieldPlacement[]>([])
 export const filenameHeaders = ref<string[]>([])
+const frenchDateWordsHeader = 'Date FR - mots et chiffres'
+const englishDateWordsHeader = 'Date EN - words and numbers'
+const frenchDateNumbersHeader = 'Date FR - chiffres'
+const englishDateNumbersHeader = 'Date EN - numbers'
+export const artificialHeaders = [
+  frenchDateWordsHeader,
+  englishDateWordsHeader,
+  frenchDateNumbersHeader,
+  englishDateNumbersHeader,
+]
 let movingField: FieldPlacement | undefined
+
+function artificialDateValues(): Record<string, string> {
+  const today = new Date()
+  return {
+    [frenchDateWordsHeader]: new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(today),
+    [englishDateWordsHeader]: new Intl.DateTimeFormat('en-US', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(today),
+    [frenchDateNumbersHeader]: new Intl.DateTimeFormat('fr-FR').format(today),
+    [englishDateNumbersHeader]: new Intl.DateTimeFormat('en-US').format(today),
+  }
+}
+
+export function getHeaderValue(row: Record<string, unknown>, header: string) {
+  const dateValues = artificialDateValues()
+  return dateValues[header] ?? row[header]
+}
 
 export function getPdfCoordinates(event: DragEvent | MouseEvent): PageSize {
   const target = event.currentTarget as HTMLElement | null
@@ -113,7 +146,7 @@ export function startFieldMove(field: FieldPlacement, event: PointerEvent) {
 
 function makePdfFilename(row: Record<string, unknown>, headers: string[]) {
   return headers
-    .map((header) => String(row[header] ?? '').trim())
+    .map((header) => String(getHeaderValue(row, header) ?? '').trim())
     .join('_')
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
     .replace(/\s+/g, ' ')
@@ -164,7 +197,7 @@ export async function createAndFillPdfs() {
         borderColor: undefined,
         backgroundColor: rgb(1, 1, 1),
       })
-      const value = row[placement.fieldName as keyof typeof row]
+      const value = getHeaderValue(row, placement.fieldName)
       textField.setText(value == null ? '' : String(value))
     }
     form.flatten()

@@ -5,6 +5,7 @@ import { excelData, pdfData } from '../fileUploader/fileUploader'
 import HeaderComponent from '../headerComponent/headerComponent.vue'
 import {
   allowFieldDrop,
+  artificialHeaders,
   createAndFillPdfs,
   fieldPlacements,
   filenameHeaders,
@@ -16,7 +17,7 @@ import { startFieldMove } from './filePreviewer.ts'
 
 const totalPages = computed(() => pdfData.value?.pageCount ?? 0)
 const previewSource = computed(() => pdfData.value?.buffer.slice(0))
-const excelHeaders = computed(() => excelData.value?.headers ?? [])
+const excelHeaders = computed(() => [...(excelData.value?.headers ?? []), ...artificialHeaders])
 </script>
 
 <template>
