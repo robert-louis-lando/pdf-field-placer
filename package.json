@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "pdf-lib": "^1.17.1",
+    "jszip": "^3.10.1",
     "vue": "^3.5.40",
     "vue-pdf-embed": "^2.1.5",
     "vue-router": "^5.2.0",

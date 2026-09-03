@@ -1,13 +1,28 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { excelData } from '../fileUploader/fileUploader'
+import { fieldPlacements } from '../filePreviewer/filePreviewer'
+
+const availableHeaders = computed(
+  () => excelData.value?.headers.filter((header) => !fieldPlacements.value.some((field) => field.fieldName === header)),
+)
+
+function startDrag(event: DragEvent, header: string) {
+  event.dataTransfer?.setData('text/plain', header)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy'
+}
 </script>
 
 <template>
   <div class="floating-bottom-bar flex align-center">
     <v-chip-group selected-class="text-secondary">
-      <v-chip v-for="header in excelData?.headers" :key="header" :value="header">{{
-        header
-      }}</v-chip>
+      <v-chip
+        v-for="header in availableHeaders"
+        :key="header"
+        :value="header"
+        :draggable="true"
+        @dragstart="startDrag($event, header)"
+      >{{ header }}</v-chip>
     </v-chip-group>
   </div>
 </template>

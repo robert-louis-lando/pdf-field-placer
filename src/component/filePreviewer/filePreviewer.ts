@@ -1,11 +1,23 @@
 import { computed, ref } from 'vue'
-import { pdfBuffer, pdfData, type PageSize } from '../fileUploader/fileUploader.ts'
-import { PDFDocument } from 'pdf-lib'
+import { excelData, pdfData, type PageSize } from '../fileUploader/fileUploader.ts'
+import { PDFDocument, rgb } from 'pdf-lib'
+import JSZip from 'jszip'
 
 export const pdfDimensions = computed(() => pdfData.value?.dimensions)
 export const page = ref(1)
+export interface FieldPlacement {
+  fieldName: string
+  page: number
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
-export function getPdfCoordinates(event: MouseEvent): PageSize {
+export const fieldPlacements = ref<FieldPlacement[]>([])
+let movingField: FieldPlacement | undefined
+
+export function getPdfCoordinates(event: DragEvent | MouseEvent): PageSize {
   const target = event.currentTarget as HTMLElement | null
   if (!target) throw new Error('no target')
 
@@ -18,51 +30,109 @@ export function getPdfCoordinates(event: MouseEvent): PageSize {
 
   if (!pdfDimensions.value) throw new Error('No PDF dimensions')
 
-  const positionXFromTop_LeftOrigin = Math.round(viewPortRatioX * pdfDimensions.value.width)
-  const positionYFromTop_LeftOrigin = Math.round(viewPortRatioY * pdfDimensions.value.height)
-
-  const width = positionXFromTop_LeftOrigin
-  const height = Math.round(pdfDimensions.value.height - positionYFromTop_LeftOrigin)
-  return { width, height }
+  return {
+    width: Math.round(viewPortRatioX * pdfDimensions.value.width),
+    height: Math.round(viewPortRatioY * pdfDimensions.value.height),
+  }
 }
 
-export async function processPdfClick(event: MouseEvent) {
-  if (!pdfBuffer.value) return
-  const result = await addFillableFieldToForm('test', getPdfCoordinates(event), page.value)
-  console.log('PDF updated successfully, byte count:', result.length)
+export function allowFieldDrop(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
 }
 
-export async function addFillableFieldToForm(
-  fieldName: string,
-  dimensions: PageSize,
-  currentPage: number,
-): Promise<Uint8Array> {
-  // Check if buffer exists and is not detached (byteLength > 0)
-  if (!pdfBuffer.value || pdfBuffer.value.byteLength === 0) {
-    throw new Error(
-      'PDF buffer is detached or empty. Pass a cloned source to your PDF viewer component.',
+export async function processFieldDrop(event: DragEvent) {
+  event.preventDefault()
+  const fieldName = event.dataTransfer?.getData('text/plain')
+  if (!fieldName || !pdfData.value || fieldPlacements.value.some((field) => field.fieldName === fieldName)) {
+    return
+  }
+
+  const position = getPdfCoordinates(event)
+  const dimensions = pdfDimensions.value
+  if (!dimensions) return
+
+  const width = Math.min(150, dimensions.width - position.width)
+  const height = 20
+  const placement: FieldPlacement = {
+    fieldName,
+    page: page.value,
+    x: position.width,
+    y: Math.max(0, dimensions.height - position.height - height),
+    width,
+    height,
+  }
+  fieldPlacements.value.push(placement)
+}
+
+export function removeField(fieldName: string) {
+  fieldPlacements.value = fieldPlacements.value.filter((field) => field.fieldName !== fieldName)
+}
+
+export function startFieldMove(field: FieldPlacement, event: PointerEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  movingField = field
+  const fieldElement = event.currentTarget as HTMLElement
+
+  const move = (moveEvent: PointerEvent) => {
+    if (!movingField || !pdfDimensions.value) return
+    const wrapper = fieldElement.parentElement
+    if (!wrapper) return
+    const rect = wrapper.getBoundingClientRect()
+    const x = ((moveEvent.clientX - rect.left) / rect.width) * pdfDimensions.value.width
+    const top = ((moveEvent.clientY - rect.top) / rect.height) * pdfDimensions.value.height
+    movingField.x = Math.max(0, Math.min(pdfDimensions.value.width - movingField.width, Math.round(x)))
+    movingField.y = Math.max(
+      0,
+      Math.min(pdfDimensions.value.height - movingField.height, Math.round(pdfDimensions.value.height - top - movingField.height)),
     )
   }
 
-  // Create a copy for pdf-lib to work with
-  const bytesToLoad = new Uint8Array(pdfBuffer.value)
-  const pdfDoc = await PDFDocument.load(bytesToLoad)
+  const stop = async () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', stop)
+    movingField = undefined
+  }
 
-  const form = pdfDoc.getForm()
-  const pageIndex = Math.max(0, currentPage - 1) // 0-indexed page lookup
-  const pdfPage = pdfDoc.getPage(pageIndex)
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', stop, { once: true })
+}
 
-  const textField = form.createTextField(fieldName)
-  textField.addToPage(pdfPage, {
-    x: dimensions.width,
-    y: dimensions.height,
-    width: 150,
-    height: 20,
-  })
+export async function createAndFillPdfs() {
+  if (!pdfData.value?.buffer || !fieldPlacements.value.length) return
 
-  // Save modified bytes and update reactive state with a fresh buffer
-  const updatedBytes = await pdfDoc.save()
-  pdfBuffer.value = new Uint8Array(updatedBytes)
+  const rows = excelData.value?.jsonData
+  if (!rows?.length) return
 
-  return updatedBytes
+  const zip = new JSZip()
+  for (const [index, row] of rows.entries()) {
+    const pdfDoc = await PDFDocument.load(new Uint8Array(pdfData.value.buffer))
+    const form = pdfDoc.getForm()
+    for (const placement of fieldPlacements.value) {
+      const pdfPage = pdfDoc.getPage(Math.max(0, placement.page - 1))
+      const textField = form.createTextField(placement.fieldName)
+      textField.addToPage(pdfPage, {
+        x: placement.x,
+        y: placement.y,
+        width: placement.width,
+        height: placement.height,
+        borderWidth: 0,
+        borderColor: undefined,
+        backgroundColor: rgb(1, 1, 1),
+      })
+      const value = row[placement.fieldName as keyof typeof row]
+      textField.setText(value == null ? '' : String(value))
+    }
+    form.flatten()
+    zip.file(`filled-${index + 1}.pdf`, await pdfDoc.save())
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(zipBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'filled-pdfs.zip'
+  link.click()
+  URL.revokeObjectURL(url)
 }
