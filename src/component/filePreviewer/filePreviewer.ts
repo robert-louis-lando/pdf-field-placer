@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { excelData, pdfData, type PageSize } from '../fileUploader/fileUploader.ts'
+import { triggerErrorSnackbar } from '../snackBar/snackBar'
 import { PDFDocument, rgb } from 'pdf-lib'
 import JSZip from 'jszip'
 
@@ -15,6 +16,7 @@ export interface FieldPlacement {
 }
 
 export const fieldPlacements = ref<FieldPlacement[]>([])
+export const filenameHeaders = ref<string[]>([])
 let movingField: FieldPlacement | undefined
 
 export function getPdfCoordinates(event: DragEvent | MouseEvent): PageSize {
@@ -109,11 +111,42 @@ export function startFieldMove(field: FieldPlacement, event: PointerEvent) {
   window.addEventListener('pointerup', stop, { once: true })
 }
 
+function makePdfFilename(row: Record<string, unknown>, headers: string[]) {
+  return headers
+    .map((header) => String(row[header] ?? '').trim())
+    .join('_')
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function createAndFillPdfs() {
   if (!pdfData.value?.buffer || !fieldPlacements.value.length) return
 
   const rows = excelData.value?.jsonData
   if (!rows?.length) return
+  if (!filenameHeaders.value.length) {
+    triggerErrorSnackbar('Choose at least one Excel header for the PDF filename.')
+    return
+  }
+
+  const filenames = rows.map((row) => makePdfFilename(row, filenameHeaders.value))
+  if (filenames.some((filename) => !filename)) {
+    triggerErrorSnackbar('A selected filename header is blank for at least one Excel row.')
+    return
+  }
+
+  const duplicateFilename = filenames.find(
+    (filename, index) =>
+      filenames.findIndex((candidate) => candidate.toLowerCase() === filename.toLowerCase()) !==
+      index,
+  )
+  if (duplicateFilename) {
+    triggerErrorSnackbar(
+      `Duplicate PDF filename "${duplicateFilename}.pdf". Choose different headers.`,
+    )
+    return
+  }
 
   const zip = new JSZip()
   for (const [index, row] of rows.entries()) {
@@ -135,7 +168,7 @@ export async function createAndFillPdfs() {
       textField.setText(value == null ? '' : String(value))
     }
     form.flatten()
-    zip.file(`filled-${index + 1}.pdf`, await pdfDoc.save())
+    zip.file(`${filenames[index]}.pdf`, await pdfDoc.save())
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob' })

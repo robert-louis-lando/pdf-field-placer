@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import VuePdfEmbed from 'vue-pdf-embed'
-import { pdfData } from '../fileUploader/fileUploader'
+import { excelData, pdfData } from '../fileUploader/fileUploader'
 import HeaderComponent from '../headerComponent/headerComponent.vue'
 import {
   allowFieldDrop,
   createAndFillPdfs,
   fieldPlacements,
+  filenameHeaders,
   page,
   processFieldDrop,
   removeField,
@@ -15,6 +16,7 @@ import { startFieldMove } from './filePreviewer.ts'
 
 const totalPages = computed(() => pdfData.value?.pageCount ?? 0)
 const previewSource = computed(() => pdfData.value?.buffer.slice(0))
+const excelHeaders = computed(() => excelData.value?.headers ?? [])
 </script>
 
 <template>
@@ -25,6 +27,21 @@ const previewSource = computed(() => pdfData.value?.buffer.slice(0))
       <span>Page {{ page }} of {{ totalPages }}</span>
       <v-btn :disabled="page >= totalPages" size="small" width="100" @click="page++">Next</v-btn>
       <v-spacer />
+    </v-container>
+
+    <v-container class="filename-controls">
+      <v-select
+        v-model="filenameHeaders"
+        :items="excelHeaders"
+        label="PDF filename headers"
+        hint="Selected row values are joined with underscores"
+        persistent-hint
+        multiple
+        chips
+        closable-chips
+        density="compact"
+        variant="outlined"
+      />
       <v-btn :disabled="!fieldPlacements.length" color="primary" @click="createAndFillPdfs">
         Create fields &amp; fill PDFs
       </v-btn>
@@ -108,8 +125,19 @@ const previewSource = computed(() => pdfData.value?.buffer.slice(0))
 }
 
 .toolbar,
+.filename-controls,
 .field-count {
   max-width: 800px;
+}
+
+.filename-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filename-controls .v-select {
+  flex: 1;
 }
 
 .field-count {
